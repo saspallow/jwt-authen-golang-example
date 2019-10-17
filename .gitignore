@@ -2,3 +2,4 @@ service-account.json
 key.rsa
 key.pub
 build/
+.DS_Store

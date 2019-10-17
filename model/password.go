@@ -8,7 +8,7 @@ const bcryptCost = 13
 
 // HasPassword base type
 type HasPassword struct {
-	Password string `datastore:",noindex" json:"-"`
+	Password string `firestore:",noindex" json:"-"`
 }
 
 // SetPassword hash password then set to model

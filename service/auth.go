@@ -19,9 +19,9 @@ import (
 
 // Auth service
 func Auth(g *echo.Group) {
-	g.Post("", authTokenHandler)
-	g.Post("/register", authRegisterHandler)
-	g.Post("/revoke", authRevokeHandler, verifyAccessTokenMiddleware)
+	g.POST("", authTokenHandler)
+	g.POST("/register", authRegisterHandler)
+	g.POST("/revoke", authRevokeHandler, verifyAccessTokenMiddleware)
 }
 
 type authRequest struct {
@@ -36,7 +36,7 @@ type authResponse struct {
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int64  `json:"expires_in"` // unit: seconds
 	RefreshToken string `json:"refresh_token,omitempty"`
-	UID          int64  `json:"uid"`
+	UID          string `json:"uid"`
 }
 
 type grantType string
@@ -140,7 +140,7 @@ func authRegisterHandler(c echo.Context) error {
 }
 
 type tokenClaim struct {
-	ID   int64     `json:"id"`
+	ID   string    `json:"id"`
 	Type tokenType `json:"type"`
 	jwt.StandardClaims
 }
@@ -205,7 +205,7 @@ func authRevokeHandler(c echo.Context) error {
 }
 
 func getTokenFromHeader(c echo.Context) string {
-	token := c.Request().Header().Get(echo.HeaderAuthorization)
+	token := c.Request().Header.Get(echo.HeaderAuthorization)
 	token = strings.TrimSpace(token)
 	if token == "" || len(token) < 8 || strings.ToLower(token[:7]) != "bearer " {
 		return ""
@@ -245,7 +245,7 @@ func verifyAccessTokenMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-func generateToken(id int64, expiresIn time.Duration, tokenType tokenType) (string, error) {
+func generateToken(id string, expiresIn time.Duration, tokenType tokenType) (string, error) {
 	expiresAt := int64(0) // not expires
 	now := time.Now()
 	if expiresIn > 0 {
@@ -263,7 +263,7 @@ func generateToken(id int64, expiresIn time.Duration, tokenType tokenType) (stri
 	return token.SignedString(privateKey)
 }
 
-func generateRefreshToken(id int64) (string, error) {
+func generateRefreshToken(id string) (string, error) {
 	token, err := generateToken(id, 0, TokenTypeRefreshToken)
 	if err != nil {
 		return "", err
@@ -274,7 +274,7 @@ func generateRefreshToken(id int64) (string, error) {
 	return token, nil
 }
 
-func generateAccessToken(id int64, expiresIn time.Duration) (string, error) {
+func generateAccessToken(id string, expiresIn time.Duration) (string, error) {
 	token, err := generateToken(id, expiresIn, TokenTypeAccessToken)
 	if err != nil {
 		return "", err

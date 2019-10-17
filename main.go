@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"time"
 
 	"jwt-authen-golang-example/api"
 	"jwt-authen-golang-example/service"
@@ -11,12 +10,10 @@ import (
 	"io/ioutil"
 
 	"github.com/labstack/echo"
-	"github.com/labstack/echo/engine"
-	"github.com/labstack/echo/engine/standard"
 	"github.com/labstack/echo/middleware"
 )
 
-const projectID = "jwt-authen-example"
+const projectID = "smooth-delivery"
 
 func main() {
 	serviceAccount, err := ioutil.ReadFile("service-account.json")
@@ -58,16 +55,17 @@ func main() {
 	)
 
 	// Health check
-	e.Get("/_ah/health", func(c echo.Context) error {
+	e.GET("/_ah/health", func(c echo.Context) error {
 		return c.String(http.StatusOK, "OK")
 	})
 
 	// Register services
 	service.Auth(e.Group("/auth"))
 
-	e.Run(standard.WithConfig(engine.Config{
-		Address:      ":9000",
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-	}))
+	e.Logger.Fatal(e.Start(":9000"))
+	// e.Run(standard.WithConfig(engine.Config{
+	// 	Address:      ":9000",
+	// 	ReadTimeout:  30 * time.Second,
+	// 	WriteTimeout: 30 * time.Second,
+	// }))
 }

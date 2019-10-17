@@ -2,10 +2,11 @@ package api
 
 import (
 	"context"
+	"log"
 	"time"
 
-	"cloud.google.com/go/datastore"
-	"golang.org/x/oauth2/google"
+	"cloud.google.com/go/firestore"
+	firebase "firebase.google.com/go"
 	"google.golang.org/api/option"
 )
 
@@ -16,19 +17,24 @@ type Config struct {
 }
 
 var (
-	client *datastore.Client
+	client *firestore.Client
 )
 
 // Init api
 func Init(cfg Config) error {
-	gconf, err := google.JWTConfigFromJSON(cfg.ServiceAccountJSON, datastore.ScopeDatastore)
-	if err != nil {
-		return err
-	}
 
 	ctx := context.Background()
 
-	client, err = datastore.NewClient(ctx, cfg.ProjectID, option.WithTokenSource(gconf.TokenSource(ctx)))
+	sa := option.WithCredentialsFile("service-account.json")
+	app, err := firebase.NewApp(ctx, nil, sa)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	client, err = app.Firestore(ctx)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	return err
 }
 

@@ -2,32 +2,35 @@ package api
 
 import (
 	"jwt-authen-golang-example/model"
+	"log"
 
-	"cloud.google.com/go/datastore"
 	"google.golang.org/api/iterator"
 )
 
 const kindUser = "User"
 
-// FindUser from datastore
+// FindUser from firestore
 func FindUser(username, password string) (*model.User, error) {
 	ctx, cancel := getContext()
 	defer cancel()
 
 	var user model.User
-	q := datastore.
-		NewQuery(kindUser).
-		Filter("Username =", username).
-		Limit(1)
-	key, err := client.Run(ctx, q).Next(&user)
-	if err == iterator.Done {
-		// Not found
-		return nil, nil
+	iter := client.Collection(kindUser).Where("Username", "==", username).Limit(1).Documents(ctx)
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Println("test 2")
+			return nil, err
+		}
+
+		doc.DataTo(&user)
+		user.SetKey(doc.Ref)
 	}
-	if err != nil {
-		return nil, err
-	}
-	user.SetKey(key)
+
+	log.Println(user)
 	if !user.ComparePassword(password) {
 		// wrong password return like user not found
 		return nil, nil
@@ -35,7 +38,7 @@ func FindUser(username, password string) (*model.User, error) {
 	return &user, nil
 }
 
-// SaveUser to datastore
+// SaveUser to firestore
 func SaveUser(user *model.User) error {
 	ctx, cancel := getContext()
 	defer cancel()
@@ -44,9 +47,10 @@ func SaveUser(user *model.User) error {
 	user.Stamp()
 	key := user.Key()
 	if key == nil {
-		key = datastore.IncompleteKey(kindUser, nil)
+		key = client.Collection(kindUser).NewDoc()
 	}
-	key, err = client.Put(ctx, key, user)
+
+	_, err = client.Collection(kindUser).Doc(key.ID).Set(ctx, user)
 	if err != nil {
 		return err
 	}

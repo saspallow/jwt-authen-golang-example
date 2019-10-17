@@ -1,22 +1,22 @@
 package model
 
 import (
-	"cloud.google.com/go/datastore"
+	"cloud.google.com/go/firestore"
 )
 
-// Base type provides datastore-based model
+// Base type provides datastofirestorere-based model
 type Base struct {
-	key *datastore.Key
-	ID  int64 `datastore:"-" json:"id"`
+	key *firestore.DocumentRef
+	ID  string `firestore:"-" json:"id"`
 }
 
-// Key return datastore key or nil
-func (x *Base) Key() *datastore.Key {
+// Key return firestore key or nil
+func (x *Base) Key() *firestore.DocumentRef {
 	return x.key
 }
 
 // SetKey sets key and id to new given key
-func (x *Base) SetKey(key *datastore.Key) {
+func (x *Base) SetKey(key *firestore.DocumentRef) {
 	x.key = key
 	x.ID = key.ID
 }

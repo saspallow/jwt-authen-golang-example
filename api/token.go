@@ -3,15 +3,14 @@ package api
 import (
 	"jwt-authen-golang-example/model"
 	"time"
-
-	"cloud.google.com/go/datastore"
+	"errors"
 	"google.golang.org/api/iterator"
 )
 
 const kindToken = "Token"
 
 // CreateToken save new token to database
-func CreateToken(token string, userID int64) error {
+func CreateToken(token string, userID string) error {
 	ctx, cancel := getContext()
 	defer cancel()
 
@@ -21,8 +20,8 @@ func CreateToken(token string, userID int64) error {
 		UserID: userID,
 	}
 	tk.Stamp()
-	key := datastore.IncompleteKey(kindToken, nil)
-	key, err = client.Put(ctx, key, tk)
+	key := client.Collection(kindUser).NewDoc()
+	_, err = client.Collection(kindToken).Doc(key.ID).Set(ctx, tk)
 	if err != nil {
 		return err
 	}
@@ -35,24 +34,28 @@ func getToken(token string) (*model.Token, error) {
 	defer cancel()
 
 	var tk model.Token
-	var err error
-	q := datastore.
-		NewQuery(kindToken).
-		Filter("Token =", token).
-		Limit(1)
-	key, err := client.Run(ctx, q).Next(&tk)
-	if err == iterator.Done {
-		// token not found
-		return nil, nil
+	iter := client.Collection(kindToken).Where("Token", "==", token).Limit(1).Documents(ctx)
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		doc.DataTo(&tk)
+		tk.SetKey(doc.Ref)
 	}
-	if err != nil {
-		return nil, err
+
+	if &tk == nil {
+		return nil, errors.New("Not found")
 	}
-	tk.SetKey(key)
+
 	return &tk, nil
 }
 
-// DeleteToken delete a token from datastore
+// DeleteToken delete a token from firestore
 func DeleteToken(token string) error {
 	tk, err := getToken(token)
 	if err != nil {
@@ -60,11 +63,16 @@ func DeleteToken(token string) error {
 	}
 	ctx, cancel := getContext()
 	defer cancel()
-	return client.Delete(ctx, tk.Key())
+
+	_, err = client.Collection(kindToken).Doc(tk.Key().ID).Delete(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // ValidateToken validate and update token last access timestamp
-func ValidateToken(token string, userID int64, expiresInFromLastAccess time.Duration) (bool, error) {
+func ValidateToken(token string, userID string, expiresInFromLastAccess time.Duration) (bool, error) {
 	tk, err := getToken(token)
 	if err != nil {
 		return false, err
@@ -82,7 +90,7 @@ func ValidateToken(token string, userID int64, expiresInFromLastAccess time.Dura
 	go func(tk model.Token) {
 		ctx, cancel := getContext()
 		defer cancel()
-		client.Put(ctx, tk.Key(), &tk)
+		client.Collection(kindToken).Doc(tk.Key().ID).Set(ctx, tk)
 	}(*tk)
 	return true, nil
 }

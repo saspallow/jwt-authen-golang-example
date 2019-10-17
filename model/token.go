@@ -6,7 +6,7 @@ import "time"
 type Token struct {
 	Base
 	Token        string    `json:"-"`
-	UserID       int64     `json:"-"`
+	UserID       string    `json:"-"`
 	CreatedAt    time.Time `json:"createdAt"`
 	LastAccessAt time.Time `json:"lastAccessAt"`
 }
